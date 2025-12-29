@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Happy 20th Birthday Nada 🎉</title>
+  <style>
+    :root{
+      --bg:#fff7fb;
+      --accent:#e91e63;
+      --muted:#6b6b6b;
+    }
+    *{box-sizing:border-box;font-family: 'Cairo', Arial, sans-serif; -webkit-font-smoothing:antialiased}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#fff);height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#222}
+    .stage{width:100%;max-width:1080px;padding:28px;border-radius:20px;background:rgba(255,255,255,0.8);box-shadow:0 20px 60px rgba(15,15,30,0.08);position:relative;overflow:hidden}
+    header{display:flex;flex-direction:column;align-items:center;gap:8px}
+    h1{font-size:100px;margin:10px 0 0;letter-spacing:14px;color:var(--accent);font-weight:800}
+    h2{font-size:26px;margin:0;color:var(--muted);font-weight:600}
+    .caption{margin-top:8px;font-size:16px;color:#444}
+    .countdown{display:flex;gap:12px;margin-top:18px;align-items:center;justify-content:center}
+    .timebox{background:#fff;border-radius:12px;padding:14px 16px;min-width:92px;box-shadow:0 6px 18px rgba(10,10,30,0.06);text-align:center}
+    .timebox .num{font-size:28px;font-weight:800;color:#111}
+    .timebox .label{font-size:12px;color:#777;margin-top:6px}
+    .controls{display:flex;gap:12px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+    button{padding:12px 18px;border-radius:12px;border:0;cursor:pointer;font-weight:700}
+    .btn-primary{background:var(--accent);color:white;box-shadow:0 8px 20px rgba(230,50,120,0.14)}
+    .btn-soft{background:#f3f6ff;color:#334;}
+    .btn-audio{background:#ffb74d;color:#111; box-shadow:0 6px 16px rgba(255,183,77,0.3);}
+    .balloon{position:absolute;font-size:34px;pointer-events:none;user-select:none;transform-origin:center bottom}
+    .flower{position:absolute;width:64px;pointer-events:none;opacity:0.95;transform-origin:center center}
+    canvas#confetti{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9}
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:10;pointer-events:none}
+    .spark{position:absolute;font-size:26px;opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(0.6)}
+    @media(max-width:720px){h1{font-size:56px;letter-spacing:8px} .timebox{min-width:70px;padding:10px 12px} .balloon{font-size:26px} .flower{width:46px} }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <canvas id="confetti"></canvas>
+    <div class="overlay" id="overlay" aria-hidden="true"></div>
+
+    <header>
+      <h1>NADA</h1>
+      <h2>Happy 20th Birthday 🎉</h2>
+      <div class="caption">The world shines brighter with you in it 💖</div>
+
+      <div class="countdown" id="countdown" aria-live="polite" role="timer" style="margin-bottom:0">
+        <div class="timebox"><div class="num" id="days">--</div><div class="label">Days</div></div>
+        <div class="timebox"><div class="num" id="hours">--</div><div class="label">Hours</div></div>
+        <div class="timebox"><div class="num" id="minutes">--</div><div class="label">Minutes</div></div>
+        <div class="timebox"><div class="num" id="seconds">--</div><div class="label">Seconds</div></div>
+      </div>
+
+      <div class="controls" style="pointer-events:auto; margin-bottom:8px">
+        <button class="btn-primary" id="startBtn">Start Celebration 🎈</button>
+        <button class="btn-soft" id="previewBtn">Preview Balloons</button>
+        <button class="btn-audio" id="audioBtn">تشغيل الرسالة 🎵</button>
+      </div>
+    </header>
+
+    <!-- Decorative flowers -->
+    <img src="https://i.imgur.com/1XK0jzO.png" class="flower" style="left:6%; top:10%; animation: floatFlower 6s ease-in-out infinite" />
+    <img src="https://i.imgur.com/1XK0jzO.png" class="flower" style="right:8%; top:18%; animation: floatFlower 7s ease-in-out infinite" />
+    <img src="https://i.imgur.com/1XK0jzO.png" class="flower" style="left:18%; bottom:12%; animation: floatFlower 9s ease-in-out infinite" />
+    <img src="https://i.imgur.com/1XK0jzO.png" class="flower" style="right:20%; bottom:8%; animation: floatFlower 8s ease-in-out infinite" />
+
+    <!-- Audio element -->
+    <audio id="birthdayAudio" src="voice.mp3" preload="auto"></audio>
+  </div>
+
+  <script>
+    const target = new Date('2025-12-29T01:57:00+02:00').getTime(); // عدّل الوقت هنا
+    const daysEl = document.getElementById('days');
+    const hoursEl = document.getElementById('hours');
+    const minutesEl = document.getElementById('minutes');
+    const secondsEl = document.getElementById('seconds');
+    const startBtn = document.getElementById('startBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    const audioBtn = document.getElementById('audioBtn');
+    const stage = document.getElementById('stage');
+    const overlay = document.getElementById('overlay');
+
+    let celebrationLaunched = false;
+
+    function updateCountdown(){
+      const now = Date.now();
+      let diff = Math.max(0, target - now);
+
+      const days = Math.floor(diff / (1000*60*60*24));
+      diff -= days * (1000*60*60*24);
+      const hours = Math.floor(diff / (1000*60*60)); diff -= hours * (1000*60*60);
+      const minutes = Math.floor(diff / (1000*60)); diff -= minutes * (1000*60);
+      const seconds = Math.floor(diff / 1000);
+
+      daysEl.textContent = String(days).padStart(2,'0');
+      hoursEl.textContent = String(hours).padStart(2,'0');
+      minutesEl.textContent = String(minutes).padStart(2,'0');
+      secondsEl.textContent = String(seconds).padStart(2,'0');
+
+      if(target - Date.now() <= 0 && !celebrationLaunched){
+        launchCelebration();
+      }
+    }
+    setInterval(updateCountdown,1000);
+    updateCountdown();
+
+    // Balloon functions
+    function spawnBalloon(xPercent, delay=0){
+      const el = document.createElement('div');
+      el.className = 'balloon';
+      el.style.left = xPercent + '%';
+      el.style.bottom = '-10%';
+      el.style.fontSize = (Math.random()*40 + 30) + 'px';
+      el.style.opacity = 0;
+      el.style.transform = 'translateY(0) scale(0.8)';
+      el.textContent = ['🎈','🎈','🎉','🎈'][Math.floor(Math.random()*4)];
+      stage.appendChild(el);
+      setTimeout(()=>{
+        el.animate([
+          { transform: 'translateY(0) scale(0.8)', opacity:0 },
+          { transform: 'translateY(-120vh) rotate(' + (Math.random()*720 - 360) + 'deg) scale(1)', opacity:1 }
+        ], { duration: 4200 + Math.random()*2400, easing: 'cubic-bezier(.2,.9,.2,1)' });
+        setTimeout(()=>el.remove(), 7000);
+      }, delay);
+    }
+    function burstBalloons(count=40){ for(let i=0;i<count;i++){ spawnBalloon(Math.random()*100, i*80); } }
+
+    // Confetti
+    const confettiCanvas = document.getElementById('confetti');
+    const ctx = confettiCanvas.getContext('2d');
+    function resizeCanvas(){ confettiCanvas.width = confettiCanvas.clientWidth; confettiCanvas.height = confettiCanvas.clientHeight; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+    const confetti = [];
+    function createConfetti(count=220){
+      for(let i=0;i<count;i++){
+        confetti.push({ x: Math.random()*confettiCanvas.width, y: Math.random()*confettiCanvas.height - confettiCanvas.height, w: Math.random()*10 + 6, h: Math.random()*8 + 4, vx: Math.random()*1 - 0.5, vy: Math.random()*3 + 1, rot: Math.random()*360, color: ['#ff8ba7','#ffd3a5','#8be5ff','#c6ffb3','#ffd6ff'][Math.floor(Math.random()*5)] });
+      }
+    }
+    function updateConfetti(){
+      ctx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+      for(let p of confetti){
+        p.x += p.vx; p.y += p.vy; p.rot += p.vx*5;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot*Math.PI/180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+        ctx.restore();
+      }
+      for(let i=confetti.length-1;i>=0;i--){ if(confetti[i].y>confettiCanvas.height+40) confetti.splice(i,1); }
+    }
+    let confettiAnim;
+    function runConfetti(){ createConfetti(260); if(confettiAnim) cancelAnimationFrame(confettiAnim); function loop(){ updateConfetti(); if(confetti.length>0) confettiAnim=requestAnimationFrame(loop); } loop(); setTimeout(()=>{ confetti.length=0; }, 9000); }
+
+    // Flowers and sparkles
+    function spawnFlower(xPercent, yPercent, delay=0){
+      const img = document.createElement('img');
+      img.src='https://i.imgur.com/1XK0jzO.png';
+      img.className='flower';
+      img.style.left=xPercent+'%';
+      img.style.top=yPercent+'%';
+      img.style.opacity=0;
+      stage.appendChild(img);
+      setTimeout(()=>{
+        img.animate([
+          { transform:'translateY(0) scale(0.6) rotate(0deg)', opacity:0 },
+          { transform:'translateY(-60px) scale(1) rotate(10deg)', opacity:1 },
+          { transform:'translateY(-120px) scale(0.9) rotate(20deg)', opacity:0 }
+        ], { duration:3500 + Math.random()*1400, easing:'cubic-bezier(.2,.9,.2,1)' });
+        setTimeout(()=>img.remove(), 5000);
+      }, delay);
+    }
+    function spawnSpark(x,y){
+      const s=document.createElement('div');
+      s.className='spark';
+      s.style.left=x+'px';
+      s.style.top=y+'px';
+      s.textContent=['✨','💖','💫'][Math.floor(Math.random()*3)];
+      stage.appendChild(s);
+      s.animate([
+        { transform:'translate(-50%,-50%) scale(0.6)', opacity:0},
+        { transform:'translate(-50%,-50%) scale(1.2)', opacity:1},
+        { transform:'translate(-50%,-50%) scale(0.8)', opacity:0}
+      ],{duration:900,easing:'cubic-bezier(.2,.9,.2,1)'});
+      setTimeout(()=>s.remove(),900);
+    }
+
+    function launchCelebration(){
+      if(celebrationLaunched) return;
+      celebrationLaunched=true;
+
+      // تشغيل الصوت مباشرة
+      const audio = document.getElementById('birthdayAudio');
+      audio.currentTime = 0;
+      audio.play().catch(err => console.log('Audio play failed:', err));
+
+      overlay.setAttribute('aria-hidden','false');
+      burstBalloons(56); 
+      runConfetti();
+      for(let i=0;i<18;i++) spawnFlower(Math.random()*80+8, Math.random()*60+10,i*120);
+      for(let i=0;i<30;i++) setTimeout(()=>spawnSpark(Math.random()*stage.clientWidth, Math.random()*stage.clientHeight*0.7+20), i*120);
+      setTimeout(()=>{ burstBalloons(36); runConfetti(); }, 2200);
+      setTimeout(()=>{ burstBalloons(28); runConfetti(); }, 5200);
+      overlay.style.pointerEvents='auto';
+      overlay.addEventListener('click', ()=>{ overlay.style.pointerEvents='none'; celebrationLaunched=false; });
+      const center=document.createElement('div');
+      center.innerHTML='🎉';
+      center.style.fontSize='80px';
+      center.style.opacity='0';
+      center.style.transform='scale(0.9)';
+      center.className='spark';
+      center.style.left=(stage.clientWidth/2)+'px';
+      center.style.top=(stage.clientHeight/2-30)+'px';
+      stage.appendChild(center);
+      center.animate([{opacity:0, transform:'translate(-50%,-50%) scale(0.8)'},{opacity:1, transform:'translate(-50%,-50%) scale(1.2)'},{opacity:0, transform:'translate(-50%,-50%) scale(1)'}],{duration:1600}).onfinish=()=>center.remove();
+    }
+
+    // Buttons
+    startBtn.addEventListener('click', ()=>{ launchCelebration(); });
+    previewBtn.addEventListener('click', ()=>{ burstBalloons(12); for(let i=0;i<6;i++) spawnFlower(Math.random()*80 + 8, Math.random()*60 + 10, i*120); });
+    
+    // Audio button
+    audioBtn.addEventListener('click', ()=>{
+      const audio=document.getElementById('birthdayAudio');
+      audio.currentTime=0;
+      audio.play().catch(err=>console.log('Audio play failed:',err));
+    });
+  </script>
+</body>
+</html>
